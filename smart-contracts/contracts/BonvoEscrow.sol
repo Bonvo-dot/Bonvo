@@ -165,6 +165,31 @@ contract BonvoEscrow is Ownable {
         return _tokenIdToListing[propertyId];
     }
 
+    function getBookingsForTenant(
+        address tenant
+    ) public view returns (Booking[] memory tenantBookings) {
+        uint256[] memory bookingIds = new uint256[](_totalBookings);
+        uint256 matches;
+        for (uint256 i; i < _totalBookings; ) {
+            if (_bookings[i+1].tenant == tenant) {
+                bookingIds[matches] = i+1;
+                unchecked {
+                    ++matches;
+                }
+            }
+            unchecked {
+                ++i;
+            }
+        }
+        tenantBookings = new Booking[](matches);
+        for (uint256 i; i < matches; ) {
+            tenantBookings[i] = _bookings[bookingIds[i]];
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
     function getAllListings() public view returns (ExtendedListing[] memory) {
         uint256 length = _listedProperties.length;
         ExtendedListing[] memory listings = new ExtendedListing[](length);
@@ -257,10 +282,11 @@ contract BonvoEscrow is Ownable {
 
     // ------------------ REGISTRATION -------------------
 
-    function registerUser() public {
+    function registerUser(string memory metadataURI) public {
         _charge(_msgSender(), _registerUserFee, _beneficiary);
         IBonvoUserReputation(_userReputationContract).mintReputation(
-            _msgSender()
+            _msgSender(),
+            metadataURI
         );
         _isUser[_msgSender()] = true;
     }
@@ -316,14 +342,14 @@ contract BonvoEscrow is Ownable {
         unchecked {
             ++_totalBookings;
         }
-        _bookings[_totalBookings] = Booking(
-            propertyId,
-            dates,
-            bookingPrice,
-            deposit,
-            _msgSender(),
-            listing.landlord
-        );
+        _bookings[_totalBookings] = Booking({
+            propertyId: propertyId,
+            dates: dates,
+            price: bookingPrice,
+            deposit: deposit,
+            tenant: _msgSender(),
+            landlord: listing.landlord
+        });
     }
 
     function confirmRentalAsTenant(
@@ -342,6 +368,12 @@ contract BonvoEscrow is Ownable {
         if (_finishedBookings[bookingId].tenantApproved) {
             _finishBooking(bookingId);
         }
+    }
+
+    function isBookingFinished(uint256 bookingId) public view returns (bool) {
+        return
+            _finishedBookings[bookingId].tenantApproved &&
+            _finishedBookings[bookingId].landlordApproved;
     }
 
     function finishBookingAsArbitrer(

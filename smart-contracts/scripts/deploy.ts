@@ -25,10 +25,10 @@ async function deployContracts(): Promise<void> {
   // await token.deployed();
   // console.log('Deployed token');
 
-  await token.mint(deployer.address, ethers.utils.parseEther('1000')); // Stoic
-  await token.mint('0x2a0E2DEc635E178D1560B95a31386109c3700Fec', ethers.utils.parseEther('1000')); // BETAX
-  await token.mint('0x95a2BADb990aAc347C0BfBDb3B93A25A10864778', ethers.utils.parseEther('1000')); // MAT
-  await token.mint('0xCb81A5E01Ab29F224DF0AA25D103F888dF32934e', ethers.utils.parseEther('1000')); // SUKU
+  // await token.mint(deployer.address, ethers.utils.parseEther('1000')); // Stoic
+  // await token.mint('0x2a0E2DEc635E178D1560B95a31386109c3700Fec', ethers.utils.parseEther('1000')); // BETAX
+  // await token.mint('0x95a2BADb990aAc347C0BfBDb3B93A25A10864778', ethers.utils.parseEther('1000')); // MAT
+  // await token.mint('0xCb81A5E01Ab29F224DF0AA25D103F888dF32934e', ethers.utils.parseEther('1000')); // SUKU
 
   const badgeFactory = await ethers.getContractFactory('BonvoBadge');
   const badgeArgs = [
@@ -56,7 +56,6 @@ async function deployContracts(): Promise<void> {
   const userReputationArgs = [
     ethers.constants.MaxUint256,
     'ipfs://collectionMetadata',
-    'ipfs://tokenURI',
     ethers.constants.AddressZero,
     badge.address,
   ];

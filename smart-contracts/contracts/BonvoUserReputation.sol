@@ -18,7 +18,6 @@ contract BonvoUserReputation is
     Ownable,
     PlatformGated,
     RMRKCollectionMetadata,
-    RMRKTokenURI,
     RMRKSoulbound,
     RMRKNestableMultiAsset
 {
@@ -26,19 +25,18 @@ contract BonvoUserReputation is
     uint256 private _totalSupply;
     uint256 private immutable _maxSupply;
     mapping(address => uint256) private _tokenIdPerAddress;
+    mapping(uint256 => string) _tokenUri;
     address private _badges;
 
     constructor(
         uint256 maxSupply_,
         string memory collectionMetadata_,
-        string memory tokenUri,
         address platform,
         address badges
     )
         PlatformGated(platform)
         RMRKCollectionMetadata(collectionMetadata_)
         RMRKNestableMultiAsset("BonvoProperty", "BP")
-        RMRKTokenURI(tokenUri, false)
     {
         _maxSupply = maxSupply_;
         _badges = badges;
@@ -149,7 +147,8 @@ contract BonvoUserReputation is
     }
 
     function mintReputation(
-        address owner
+        address owner,
+        string memory metadataURI
     ) public onlyPlatform returns (uint256) {
         if (_tokenIdPerAddress[owner] != 0)
             revert AddressAlreadyHasReputationNFT(_tokenIdPerAddress[owner]);
@@ -160,14 +159,32 @@ contract BonvoUserReputation is
         uint256 tokenId = _totalSupply;
 
         _tokenIdPerAddress[owner] = tokenId;
+        _tokenUri[tokenId] = metadataURI;
         _mint(owner, tokenId, "");
         return tokenId;
     }
 
-    function _afterAddChild(uint256 tokenId, address childAddress, uint256 childId, bytes memory) internal override {
+    function tokenURI(
+        uint256 tokenId
+    ) public view virtual returns (string memory) {
+        _requireMinted(tokenId);
+        return _tokenUri[tokenId];
+    }
+
+    function _afterAddChild(
+        uint256 tokenId,
+        address childAddress,
+        uint256 childId,
+        bytes memory
+    ) internal override {
         // Auto accept children if they are badges
         if (childAddress == _badges) {
-            _acceptChild(tokenId, _pendingChildren[tokenId].length - 1, childAddress, childId);
+            _acceptChild(
+                tokenId,
+                _pendingChildren[tokenId].length - 1,
+                childAddress,
+                childId
+            );
         }
     }
 }

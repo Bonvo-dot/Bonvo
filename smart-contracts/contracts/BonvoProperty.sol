@@ -180,10 +180,20 @@ contract BonvoProperty is
         ) = IBonvoBadge(_badges).countGroupByType(badgeIds);
     }
 
-    function _afterAddChild(uint256 tokenId, address childAddress, uint256 childId, bytes memory) internal override {
+    function _afterAddChild(
+        uint256 tokenId,
+        address childAddress,
+        uint256 childId,
+        bytes memory
+    ) internal override {
         // Auto accept children if they are badges
         if (childAddress == _badges) {
-            _acceptChild(tokenId, _pendingChildren[tokenId].length - 1, childAddress, childId);
+            _acceptChild(
+                tokenId,
+                _pendingChildren[tokenId].length - 1,
+                childAddress,
+                childId
+            );
         }
     }
 }

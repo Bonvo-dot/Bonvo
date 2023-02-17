@@ -6,5 +6,8 @@ interface IBonvoUserReputation {
         address owner
     ) external view returns (uint256 tokenId);
 
-    function mintReputation(address owner) external returns (uint256);
+    function mintReputation(
+        address owner,
+        string memory metadataURI
+    ) external returns (uint256);
 }

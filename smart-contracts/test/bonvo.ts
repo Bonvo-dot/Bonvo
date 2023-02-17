@@ -55,7 +55,6 @@ async function fixture(): Promise<{
     await userReputationFactory.deploy(
       ethers.constants.MaxUint256,
       'ipfs://collectionMetadata',
-      'ipfs://tokenURI',
       ethers.constants.AddressZero,
       badge.address,
     )
@@ -107,20 +106,21 @@ describe('Bonvo', async () => {
   it('can register', async function () {
     await token.mint(landlord.address, REGISTER_FEE);
     await token.connect(landlord).approve(escrow.address, REGISTER_FEE);
-    await expect(escrow.connect(landlord).registerUser())
+    await expect(escrow.connect(landlord).registerUser('ipfs://userMetadata'))
       .to.emit(userReputation, 'Transfer')
       .withArgs(ethers.constants.AddressZero, landlord.address, 1);
+    expect(await userReputation.tokenURI(1)).to.eql('ipfs://userMetadata');
   });
 
   describe('With registered users', async () => {
     beforeEach(async function () {
       await token.mint(landlord.address, REGISTER_FEE);
       await token.connect(landlord).approve(escrow.address, REGISTER_FEE);
-      await escrow.connect(landlord).registerUser();
+      await escrow.connect(landlord).registerUser('ipfs://userMetadataA');
 
       await token.mint(tenant.address, REGISTER_FEE);
       await token.connect(tenant).approve(escrow.address, REGISTER_FEE);
-      await escrow.connect(tenant).registerUser();
+      await escrow.connect(tenant).registerUser('ipfs://userMetadataB');
     });
 
     it('can add property', async function () {
@@ -205,9 +205,13 @@ describe('Bonvo', async () => {
 
         it('can book property', async function () {
           const startDate = new Date();
-          startDate.setUTCHours(0,0,0,0);
+          startDate.setUTCHours(0, 0, 0, 0);
           const startDateBn = bn(Math.floor(startDate.getTime() / 1000));
-          const dates = [startDateBn, startDateBn.add(24 * 60 * 60), startDateBn.add(2 * 24 * 60 * 60)];
+          const dates = [
+            startDateBn,
+            startDateBn.add(24 * 60 * 60),
+            startDateBn.add(2 * 24 * 60 * 60),
+          ];
           await token.mint(tenant.address, pricePerDay1.mul(3).add(deposit1));
           await token.connect(tenant).approve(escrow.address, pricePerDay1.mul(3).add(deposit1));
           await escrow.connect(tenant).book(propertyId, dates);
@@ -229,13 +233,28 @@ describe('Bonvo', async () => {
 
           beforeEach(async function () {
             const startDate = new Date();
-            startDate.setUTCHours(0,0,0,0);
+            startDate.setUTCHours(0, 0, 0, 0);
             const startDateBn = bn(Math.floor(startDate.getTime() / 1000));
             dates = [startDateBn, startDateBn.add(24 * 60 * 60), startDateBn.add(2 * 24 * 60 * 60)];
             await token.mint(tenant.address, pricePerDay1.mul(3).add(deposit1));
             await token.connect(tenant).approve(escrow.address, pricePerDay1.mul(3).add(deposit1));
             await escrow.connect(tenant).book(propertyId, dates);
             bookingId = await escrow.getTotalBookings();
+          });
+
+          it('can get bookings for tenant', async function () {
+            expect(await escrow.getBookingsForTenant(tenant.address)).to.eql(
+              [
+                [
+                  propertyId,
+                  dates,
+                  pricePerDay1.mul(3),
+                  deposit1,
+                  tenant.address,
+                  landlord.address,
+                ]
+              ]
+            )
           });
 
           it('can get finish booking', async function () {
@@ -248,9 +267,13 @@ describe('Bonvo', async () => {
             // Tenant got deposit back
             expect(await token.balanceOf(tenant.address)).to.equal(deposit1);
             // Landlord got the rest
-            expect(await token.balanceOf(landlord.address)).to.equal((pricePerDay1.mul(3)).sub(platformFee));
+            expect(await token.balanceOf(landlord.address)).to.equal(
+              pricePerDay1.mul(3).sub(platformFee),
+            );
             // Beneficiary got platform fee
-            expect(await token.balanceOf(deployer.address)).to.equal(initialBeneficiaryBalance.add(platformFee));
+            expect(await token.balanceOf(deployer.address)).to.equal(
+              initialBeneficiaryBalance.add(platformFee),
+            );
           });
 
           describe('With finished booking', async () => {
@@ -275,7 +298,9 @@ describe('Bonvo', async () => {
                 bn(0), // good location medals
               ]);
 
-              const landlordReputationId = await userReputation.getTokenIdForAddress(landlord.address);
+              const landlordReputationId = await userReputation.getTokenIdForAddress(
+                landlord.address,
+              );
               expect(await userReputation.getMedals(landlordReputationId)).to.eql([
                 bn(1), // friendly medals
                 bn(0), // puntual medals
